@@ -10,7 +10,7 @@
     let button: HTMLElement | undefined = $state();
     let rect: DOMRect = $state(new DOMRect());
 
-    let usedColorList: string[] = $state([]);
+    let usedColorList: string[] = $state(JSON.parse(window.localStorage.getItem("colors") ?? "[]"));
 
     let mouseDownColor: string = "";
 
@@ -61,8 +61,22 @@
     }
 
     const handleChangePickColor = (color: string) => {
+
         isOpen = false;
         document.removeEventListener("mousedown", outClick);
+
+        const colors = [...usedColorList];
+        const index = colors.findIndex(c => color == c);
+
+        if (index > -1) colors.splice(index, 1);
+
+        colors.unshift(color);
+        if (colors.length > 100) colors.pop();
+
+        usedColorList = colors;
+
+        window.localStorage.setItem("colors", JSON.stringify(usedColorList));
+
         onChangeColor?.call(undefined, color);
     }
 
@@ -70,15 +84,20 @@
 
 <style>
 
+    :root {
+        --tileSize: 24px;
+    }
+
+
     color-picker {
         position: absolute;
         width: fit-content;
         height: fit-content;
+        
         padding: 8px;
-        /* width: 64px; */
-        /* height: 64px; */
+        background-color: white;
         z-index: 2;
-        border: 2px solid gray;
+        border: 1px solid gray;
     }
 
     current-colorbox {
@@ -89,40 +108,57 @@
 
     color-tile {
         display: block;
-        width: 12px;
-        height: 12px;
+        width: calc(var(--tileSize) - 4px);
+        height: calc(var(--tileSize) - 4px);
         outline: none;
         border: 2px solid currentColor;
+    }
+
+    color-tile.select {
+        border: solid 2px orange;
     }
 
     color-tile:hover {
         border: solid 2px orange;
     }
 
+    box-caption {
+        display: block;
+        color: rgb(36, 36, 36);
+        font-weight: bold;
+        /* background-color: lightgray; */
+    }
+
     flex-box {
-        display: flex;
-        gap: 2px;
+        /* display: flex; */
+        /* gap: 2px; */
     }
 
     flex-list {
+
         display: flex;
-        flex-direction: column;
-        gap: 0px;
+        flex-wrap: wrap;
+        align-content: flex-start;
+
+        /* display: grid; */
+        /* grid-template-columns: repeat(auto-fill, minmax(15px, 1fr)); */
+
+
+        /* display: flex; */
+        /* flex-direction: column; */
+        /* gap: 0px; */
+              
+        max-width: calc(var(--tileSize) * 10);
+        min-width: calc(var(--tileSize) * 10);
+        
+        max-height: calc(var(--tileSize) * 10);
+        min-height: calc(var(--tileSize) * 10);
+
         border: lightgray solid 1px;
     }
 
     .hidden {
         display: none;
-    }
-
-    color-picker-background {
-        overflow: hidden;
-        position: absolute;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(128, 128, 128, 0.5);
-        top: 0;
-        left: 0;    
     }
 
 </style>
@@ -134,6 +170,7 @@
     role="button"
     onmousedown={(e: any) => handleMouseDown(e, color)} 
     onmouseup={handleMouseUp} 
+    class:select={color == currentColor}
     style="color: {color}; background-color: {color};"></color-tile>
 {/snippet}
 
@@ -151,10 +188,15 @@
 
 <color-picker style="top: {(rect.top + rect.height)}px; left:{rect.left}px;" class:hidden={!isOpen}>
 
+    <box-caption>最近使用した色</box-caption>
+
     <flex-box>
-        {@render colorList(["#F1CEEE", "#E49EDD", "#D76DCC", "#78206E", "#501549"])}
+        {@render colorList(usedColorList)}
     </flex-box>
 
+    <hr>
+
+    <box-caption>その他の色</box-caption>
     <input type="color" value={currentColor} onchange={(e) => handleChangePickColor(e.currentTarget.value)} >
 
 </color-picker>
